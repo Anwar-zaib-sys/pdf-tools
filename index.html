@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Merge, remove pages from, and compress PDFs locally in your browser." />
+    <meta name="theme-color" content="#111827" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23111827'/%3E%3Cpath d='M19 12h19l9 9v31H19z' fill='%23fff'/%3E%3Cpath d='M38 12v10h9' fill='none' stroke='%23f05a47' stroke-width='4'/%3E%3Cpath d='M25 34h16M25 42h12' stroke='%23f05a47' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E" />
+    <title>PDF Bench — Local PDF tools</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="PDF Bench home">
+          <span class="brand-mark" aria-hidden="true"><i data-lucide="files"></i></span>
+          <span>PDF Bench</span>
+        </a>
+        <div class="privacy-note"><i data-lucide="shield-check"></i><span>Files stay on this device</span></div>
+      </header>
+
+      <main class="workspace">
+        <section class="intro" aria-labelledby="page-title">
+          <p class="eyebrow">LOCAL PDF WORKSPACE</p>
+          <h1 id="page-title">What do you need to do?</h1>
+          <p>Choose a tool, add your PDF, and download the result. Nothing is uploaded.</p>
+        </section>
+
+        <nav class="tool-tabs" aria-label="PDF tools" role="tablist">
+          <button class="tool-tab active" role="tab" aria-selected="true" aria-controls="merge-panel" id="merge-tab" data-tool="merge">
+            <span class="tab-icon coral"><i data-lucide="combine"></i></span>
+            <span><strong>Merge PDFs</strong><small>Combine files in any order</small></span>
+          </button>
+          <button class="tool-tab" role="tab" aria-selected="false" aria-controls="remove-panel" id="remove-tab" data-tool="remove">
+            <span class="tab-icon amber"><i data-lucide="file-minus-2"></i></span>
+            <span><strong>Remove pages</strong><small>Keep only what you need</small></span>
+          </button>
+          <button class="tool-tab" role="tab" aria-selected="false" aria-controls="compress-panel" id="compress-tab" data-tool="compress">
+            <span class="tab-icon blue"><i data-lucide="minimize-2"></i></span>
+            <span><strong>Compress PDF</strong><small>Reduce the file size</small></span>
+          </button>
+        </nav>
+
+        <section class="tool-stage">
+          <article class="tool-panel active" id="merge-panel" role="tabpanel" aria-labelledby="merge-tab">
+            <div class="panel-heading">
+              <div><span class="step">01</span><h2>Merge PDFs</h2></div>
+              <p>Add two or more PDFs, then drag them into the order you want.</p>
+            </div>
+            <div class="dropzone" data-dropzone="merge" tabindex="0" role="button" aria-label="Select PDF files to merge">
+              <input id="merge-input" type="file" accept="application/pdf,.pdf" multiple hidden />
+              <div class="drop-icon"><i data-lucide="plus"></i></div>
+              <strong>Drop PDFs here</strong>
+              <span>or click to choose files</span>
+              <small>PDF files only</small>
+            </div>
+            <div id="merge-work" class="work-area hidden">
+              <div class="work-toolbar"><span id="merge-count">0 files</span><button class="text-button" id="merge-add"><i data-lucide="plus"></i>Add more</button></div>
+              <div id="merge-list" class="file-list merge-file-list" aria-live="polite"></div>
+              <div class="merge-footer">
+                <label class="output-name-field" for="merge-output-name">
+                  <span>Output filename</span>
+                  <span class="filename-control"><input id="merge-output-name" type="text" value="merged" maxlength="120" autocomplete="off" spellcheck="false" /><span>.pdf</span></span>
+                </label>
+                <button class="primary-button" id="merge-run" disabled><i data-lucide="combine"></i>Merge PDFs</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="tool-panel" id="remove-panel" role="tabpanel" aria-labelledby="remove-tab" hidden>
+            <div class="panel-heading">
+              <div><span class="step">02</span><h2>Remove pages</h2></div>
+              <p>Select one PDF, then click pages to mark them for removal.</p>
+            </div>
+            <div class="dropzone" data-dropzone="remove" tabindex="0" role="button" aria-label="Select a PDF to remove pages from">
+              <input id="remove-input" type="file" accept="application/pdf,.pdf" hidden />
+              <div class="drop-icon"><i data-lucide="file-plus-2"></i></div>
+              <strong>Drop one PDF here</strong>
+              <span>or click to choose a file</span>
+              <small>PDF files only</small>
+            </div>
+            <div id="remove-work" class="work-area hidden">
+              <div class="work-toolbar wrap"><div><strong id="remove-name"></strong><span id="remove-summary" class="muted"></span></div><button class="text-button danger" id="remove-reset"><i data-lucide="x"></i>Change file</button></div>
+              <div id="page-grid" class="page-grid" aria-live="polite"></div>
+              <button class="primary-button" id="remove-run" disabled><i data-lucide="file-down"></i>Download edited PDF</button>
+            </div>
+          </article>
+
+          <article class="tool-panel" id="compress-panel" role="tabpanel" aria-labelledby="compress-tab" hidden>
+            <div class="panel-heading">
+              <div><span class="step">03</span><h2>Compress PDF</h2></div>
+              <p>Add one or more PDFs, choose the compression level, and download one ZIP.</p>
+            </div>
+            <div class="dropzone" data-dropzone="compress" tabindex="0" role="button" aria-label="Select a PDF to compress">
+              <input id="compress-input" type="file" accept="application/pdf,.pdf" multiple hidden />
+              <div class="drop-icon"><i data-lucide="file-plus-2"></i></div>
+              <strong>Drop PDFs here</strong>
+              <span>or click to choose files</span>
+              <small>PDF files only</small>
+            </div>
+            <div id="compress-work" class="work-area hidden">
+              <div class="work-toolbar">
+                <span id="compress-count">0 files</span>
+                <span class="toolbar-actions"><button class="text-button" id="compress-add"><i data-lucide="plus"></i>Add more</button><button class="text-button danger" id="compress-reset"><i data-lucide="trash-2"></i>Clear all</button></span>
+              </div>
+              <div id="compress-list" class="compress-file-list" aria-live="polite"></div>
+              <fieldset class="quality-fieldset">
+                <legend>Compression level</legend>
+                <label class="quality-card"><input type="radio" name="quality" value="light" /><span><strong>Light</strong><small>Sharper pages, larger result</small></span></label>
+                <label class="quality-card selected"><input type="radio" name="quality" value="balanced" checked /><span><strong>Balanced</strong><small>Good quality and file size</small></span></label>
+                <label class="quality-card"><input type="radio" name="quality" value="strong" /><span><strong>Strong</strong><small>Smallest result, softer pages</small></span></label>
+              </fieldset>
+              <div class="notice"><i data-lucide="info"></i><span>Compression rebuilds pages as images. Text will no longer be selectable.</span></div>
+              <button class="primary-button" id="compress-run"><i data-lucide="file-archive"></i>Compress PDFs &amp; download ZIP</button>
+            </div>
+          </article>
+        </section>
+
+        <section class="trust-strip" aria-label="Privacy and compatibility">
+          <div><i data-lucide="shield"></i><span><strong>Private by design</strong><small>Your files are processed in this browser.</small></span></div>
+          <div><i data-lucide="wifi-off"></i><span><strong>No account needed</strong><small>Open the tool and get to work.</small></span></div>
+          <div><i data-lucide="monitor-smartphone"></i><span><strong>Works anywhere</strong><small>Designed for desktop and mobile.</small></span></div>
+        </section>
+      </main>
+
+      <footer><span>PDF Bench</span><span>Local tools for everyday documents</span></footer>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <div id="busy" class="busy" hidden><div class="busy-card"><span class="spinner"></span><strong id="busy-title">Working on your PDF…</strong><span id="busy-detail">This can take a moment.</span><div class="progress-track"><span id="busy-progress"></span></div></div></div>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
